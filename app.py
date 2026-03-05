@@ -61,7 +61,7 @@ def get_holiday_label(d: date) -> str:
 
 # ===== Streamlit 页面（保持原名：早班日历）=====
 st.set_page_config(
-    page_title="早班日历",
+    page_title="lwl早班日历",
     page_icon="📅",
     layout="wide"
 )
@@ -124,7 +124,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("📅 早班日历")
+st.title("📅 lwl早班日历")
 
 tab1, tab2 = st.tabs(["今日早班", "月度日历"])
 
