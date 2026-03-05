@@ -1,6 +1,5 @@
 import streamlit as st
-import pandas as pd
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta
 
 # ===== 核心配置 =====
 start_date = date(2026, 3, 9)
@@ -20,7 +19,7 @@ holiday_dates = {
     date(2026, 6, 21): "端午"
 }
 
-# 调休上班日（键：调休日，值：补哪天的班）
+# 调休上班日
 rest_work_dates = {
     date(2026, 5, 9): date(2026, 5, 4)
 }
@@ -33,7 +32,6 @@ def is_single_week(d: date) -> bool:
     return (delta // 7) % 2 == 0
 
 def is_morning_shift(d: date) -> bool:
-    # 处理调休
     if d in rest_work_dates:
         original_date = rest_work_dates[d]
         single = is_single_week(original_date)
@@ -43,11 +41,9 @@ def is_morning_shift(d: date) -> bool:
             return True
         return False
 
-    # 周末/节假日不上班
     if d.weekday() >= 5 or d in holiday_dates:
         return False
 
-    # 正常排班
     single = is_single_week(d)
     if single and d.weekday() in [0, 2, 4]:
         return True
@@ -56,106 +52,161 @@ def is_morning_shift(d: date) -> bool:
     return False
 
 def get_holiday_label(d: date) -> str:
-    return holiday_dates.get(d, "")
+    if d in holiday_dates:
+        return holiday_dates[d]
+    elif d in rest_work_dates:
+        return "调休"
+    else:
+        return ""
 
-def generate_calendar(days=90):
-    """生成指定天数的日历数据"""
-    today = date.today()
-    calendar_dates = [today + timedelta(days=i) for i in range(days)]
-    
-    data = []
-    for d in calendar_dates:
-        # 基础信息
-        weekday = d.strftime("%a")
-        is_today = d == today
-        holiday = get_holiday_label(d)
-        is_rest_work = d in rest_work_dates
-        
-        # 班次判断
-        if holiday:
-            shift = holiday
-        elif is_rest_work:
-            shift = "调休早班" if is_morning_shift(d) else "调休晚班"
-        elif d.weekday() >= 5:
-            shift = "周末"
-        else:
-            shift = "早班" if is_morning_shift(d) else "晚班"
-        
-        # 样式标记
-        color = "#e6f4ff" if is_today else None
-        data.append({
-            "日期": d.strftime("%m-%d"),
-            "周": weekday,
-            "班次": shift,
-            "今日标记": is_today,
-            "背景色": color
-        })
-    
-    # 转为DataFrame并按周分组（方便显示）
-    df = pd.DataFrame(data)
-    df["日期周"] = df["日期"] + "\n(" + df["周"] + ")"
-    return df
+# ===== Streamlit 页面（保持原名：早班日历）=====
+st.set_page_config(
+    page_title="早班日历",
+    page_icon="📅",
+    layout="wide"
+)
 
-# ===== 页面样式：强制缩小日历（核心！） =====
+# 自定义样式（极致压缩，竖屏可滑动）
 st.markdown("""
 <style>
-/* 缩小日历容器，允许横向滚动 */
-.stDataFrame {
-    width: 100% !important;
-    overflow-x: auto !important;
-}
-/* 强制设置列宽（关键：让单元格变小） */
-div[data-testid="stDataFrame"] div[role="grid"] {
-    grid-template-columns: repeat(7, 80px) !important; /* 每列固定80px，可按需调小 */
-}
-/* 缩小单元格内边距和字体 */
-div[data-testid="stDataFrame"] td,
-div[data-testid="stDataFrame"] th {
-    padding: 4px 2px !important; /* 上下4px，左右2px，极致压缩 */
-    font-size: 11px !important; /* 小号字体，竖屏更紧凑 */
-    text-align: center !important;
-    white-space: nowrap !important;
-}
-/* 今日高亮 */
-div[data-testid="stDataFrame"] td[style*="background-color"] {
-    font-weight: bold !important;
-    color: #1890ff !important;
-}
+    .main {
+        background-color: #FFF9F2;
+        padding: 1rem;
+    }
+    .shift-card {
+        padding: 20px;
+        border-radius: 16px;
+        text-align: center;
+        font-size: 24px;
+        font-weight: bold;
+        color: white;
+        margin: 10px 0;
+    }
+    .shift-yes {
+        background-color: #E67E22;
+    }
+    .shift-no {
+        background-color: #4CAF50;
+    }
+    .holiday-label {
+        font-size: 14px;
+        color: #947764;
+        text-align: center;
+        margin-top: 5px;
+    }
+    /* 核心：强制7列，每列最小宽度，竖屏可滑动 */
+    .stColumns > div {
+        min-width: 42px !important;
+        flex: 1 1 calc(100% / 7) !important;
+    }
+    .calendar-day {
+        text-align: center;
+        padding: 6px 2px;
+        border-radius: 8px;
+        font-weight: bold;
+        font-size: 13px;
+        min-height: 45px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .calendar-header {
+        font-weight: bold;
+        color: #947764;
+        text-align: center;
+        font-size: 12px;
+        padding: 5px 0;
+    }
+    div[data-testid="stSelectbox"] {
+        max-width: 150px;
+        margin: 10px 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ===== 页面布局 =====
-st.title("2026 排班日历（小号适配版）")
-st.caption("竖屏完整显示7列，支持横向滑动；电脑端正常显示")
+st.title("📅 早班日历")
 
-# 生成日历数据
-df_calendar = generate_calendar(days=90)
+tab1, tab2 = st.tabs(["今日早班", "月度日历"])
 
-# 构建日历矩阵（按周排列，7列）
-weeks = []
-for i in range(0, len(df_calendar), 7):
-    week = df_calendar.iloc[i:i+7]
-    # 补全不足7天的周
-    while len(week) < 7:
-        week = pd.concat([week, pd.DataFrame([{"日期周": "", "班次": ""}])], ignore_index=True)
-    weeks.append(week[["日期周", "班次"]].values.flatten())
+with tab1:
+    today = date.today()
+    st.subheader(f"{today.strftime('%Y年%m月%d日')}")
 
-# 转为日历DF（列：周一到周日）
-calendar_df = pd.DataFrame(weeks, columns=["周一", "周二", "周三", "周四", "周五", "周六", "周日"])
+    shift = is_morning_shift(today)
+    holiday_label = get_holiday_label(today)
 
-# 显示日历（禁用索引，缩小高度）
-st.dataframe(
-    calendar_df,
-    index=False,
-    height=400,  # 固定高度，竖屏不占太多空间
-    use_container_width=True
-)
+    if shift:
+        st.markdown(f'<div class="shift-card shift-yes">今日有早班 🟠</div>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div class="shift-card shift-no">今日无早班 🟢</div>', unsafe_allow_html=True)
 
-# 今日提示
-today = date.today()
-today_shift = "早班" if is_morning_shift(today) else "晚班"
-if today in holiday_dates:
-    today_shift = holiday_dates[today]
-elif today in rest_work_dates:
-    today_shift = "调休早班" if is_morning_shift(today) else "调休晚班"
-st.info(f"今日({today.strftime('%Y-%m-%d')})：{today_shift}")
+    if holiday_label:
+        if today in rest_work_dates:
+            st.markdown(f'<div class="holiday-label">今日{holiday_label}（补5.4）</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="holiday-label">今日{holiday_label}，放假休息</div>', unsafe_allow_html=True)
+
+with tab2:
+    selected_month = st.selectbox("选择月份", [3, 4, 5, 6], format_func=lambda x: f"{x}月")
+    year = 2026
+
+    first_day = date(year, selected_month, 1)
+    first_weekday = first_day.weekday()
+    first_weekday_sun = (first_weekday + 1) % 7  # 周日开头
+
+    days = []
+    # 前一个月填充
+    for i in range(first_weekday_sun):
+        prev_day = first_day - timedelta(days=first_weekday_sun - i)
+        days.append((prev_day, False))
+    # 当前月
+    current_day = first_day
+    while current_day.month == selected_month:
+        days.append((current_day, True))
+        current_day += timedelta(days=1)
+    # 后一个月填充
+    while len(days) < 42:
+        days.append((current_day, False))
+        current_day += timedelta(days=1)
+
+    # 星期标题
+    cols = st.columns(7)
+    for i, day_name in enumerate(["日", "一", "二", "三", "四", "五", "六"]):
+        with cols[i]:
+            st.markdown(f'<div class="calendar-header">{day_name}</div>', unsafe_allow_html=True)
+
+    # 日期格子
+    for row in range(6):
+        cols = st.columns(7)
+        for col in range(7):
+            idx = row * 7 + col
+            d, is_current_month = days[idx]
+            shift = is_morning_shift(d)
+            is_holiday = d in holiday_dates
+            is_weekend = d.weekday() >= 5
+            is_rest_work = d in rest_work_dates
+            holiday_label = get_holiday_label(d)
+
+            with cols[col]:
+                if is_current_month:
+                    if shift:
+                        bg_color = "#E67E22"
+                        text_color = "#FFFFFF"
+                    elif is_holiday or is_weekend:
+                        bg_color = "#FEF6ED"
+                        text_color = "#947764"
+                    elif is_rest_work:
+                        bg_color = "#FFFFFF"
+                        text_color = "#8B4513"
+                    else:
+                        bg_color = "#FFFFFF"
+                        text_color = "#333333"
+
+                    st.markdown(f"""
+                    <div class="calendar-day" style="background-color: {bg_color}; color: {text_color};">
+                        {d.day}
+                        {f'<div style="font-size: 9px; margin-top: 2px;">{holiday_label}</div>' if holiday_label else ''}
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f'<div class="calendar-day" style="background-color: transparent; color: #E0E0E0;">{d.day}</div>', unsafe_allow_html=True)
