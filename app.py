@@ -1,4 +1,27 @@
 import streamlit as st
+
+# 1. 设置页面基本信息（标签页图标）
+st.set_page_config(
+    page_title="lwl早班日历",
+    page_icon="icon-192x192.png",  # 用你上传的图标
+    layout="wide"
+)
+
+# 2. 注入 PWA manifest（关键：让手机识别桌面图标）
+st.markdown(
+    f"""
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="早班日历">
+    <link rel="apple-touch-icon" href="/icon-192x192.png">
+    """,
+    unsafe_allow_html=True
+)
+
+# 你的应用代码...
+st.title("lwl早班日历")
+
+import streamlit as st
 from datetime import date, timedelta
 import os
 import time
