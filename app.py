@@ -59,24 +59,33 @@ def get_holiday_label(d: date) -> str:
     else:
         return ""
 
-# ===== Streamlit 页面（适配手机+公网）=====
-st.set_page_config(page_title="早班日历", page_icon="📅", layout="centered")
+# ===== Streamlit 页面（强制横屏网格布局）=====
+st.set_page_config(
+    page_title="早班日历",
+    page_icon="📅",
+    layout="wide"  # 改为宽布局，强制手机横屏显示网格
+)
 
-# 自定义样式（优化手机显示）
+# 自定义样式（修复手机竖排问题）
 st.markdown("""
 <style>
+    /* 强制日历网格布局，防止竖排 */
+    .stColumns > div {
+        min-width: 40px !important;
+        flex: 1 1 calc(100% / 7) !important;
+    }
     .main {
         background-color: #FFF9F2;
-        padding-bottom: 50px;
+        padding: 10px;
     }
     .shift-card {
-        padding: 25px 10px;
-        border-radius: 20px;
+        padding: 20px;
+        border-radius: 16px;
         text-align: center;
-        font-size: 28px;
+        font-size: 24px;
         font-weight: bold;
         color: white;
-        margin: 15px 0;
+        margin: 10px 0;
     }
     .shift-yes {
         background-color: #E67E22;
@@ -85,40 +94,43 @@ st.markdown("""
         background-color: #4CAF50;
     }
     .holiday-label {
-        font-size: 16px;
+        font-size: 14px;
         color: #947764;
         text-align: center;
-        margin-top: 8px;
+        margin-top: 5px;
     }
     .calendar-day {
         text-align: center;
-        padding: 10px 0;
-        border-radius: 10px;
+        padding: 8px 2px;
+        border-radius: 8px;
         font-weight: bold;
-        font-size: 16px;
+        font-size: 14px;
+        min-height: 50px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
     .calendar-header {
         font-weight: bold;
         color: #947764;
         text-align: center;
-        font-size: 14px;
+        font-size: 12px;
     }
+    /* 修复月份选择框 */
     div[data-testid="stSelectbox"] {
-        margin-bottom: 20px;
+        max-width: 200px;
+        margin: 10px 0;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 页面标题（适配手机）
 st.title("📅 早班日历")
 
-# 标签页
 tab1, tab2 = st.tabs(["今日早班", "月度日历"])
 
 with tab1:
     today = date.today()
-    # 适配日期显示（防止跨年/月）
-    st.subheader(f"{today.strftime('%Y年%m月%d日')}", divider="orange")
+    st.subheader(f"{today.strftime('%Y年%m月%d日')}")
 
     shift = is_morning_shift(today)
     holiday_label = get_holiday_label(today)
@@ -132,17 +144,13 @@ with tab1:
         st.markdown(f'<div class="holiday-label">{holiday_label}</div>', unsafe_allow_html=True)
 
 with tab2:
-    # 月份选择（适配手机）
-    selected_month = st.selectbox("选择月份", 
-                                 [("3月",3), ("4月",4), ("5月",5), ("6月",6)], 
-                                 format_func=lambda x: x[0],
-                                 index=0)[1]
+    selected_month = st.selectbox("选择月份", [3, 4, 5, 6], format_func=lambda x: f"{x}月")
     year = 2026
 
     # 生成日历
     first_day = date(year, selected_month, 1)
     first_weekday = first_day.weekday()
-    first_weekday_sun = (first_weekday + 1) % 7
+    first_weekday_sun = (first_weekday + 1) % 7  # 周日开头
 
     days = []
     # 前一个月填充
@@ -159,13 +167,13 @@ with tab2:
         days.append((current_day, False))
         current_day += timedelta(days=1)
 
-    # 星期标题（适配手机）
+    # 星期标题（7列）
     cols = st.columns(7)
     for i, day_name in enumerate(["日", "一", "二", "三", "四", "五", "六"]):
         with cols[i]:
             st.markdown(f'<div class="calendar-header">{day_name}</div>', unsafe_allow_html=True)
 
-    # 日期格子（优化手机点击）
+    # 日期格子（6行×7列）
     for row in range(6):
         cols = st.columns(7)
         for col in range(7):
@@ -195,7 +203,7 @@ with tab2:
                     st.markdown(f"""
                     <div class="calendar-day" style="background-color: {bg_color}; color: {text_color};">
                         {d.day}
-                        <div style="font-size: 10px; font-weight: normal; margin-top: 3px;">{holiday_label}</div>
+                        <div style="font-size: 9px; font-weight: normal; margin-top: 2px;">{holiday_label}</div>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
