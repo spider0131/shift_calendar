@@ -1,5 +1,14 @@
 import streamlit as st
 from datetime import date, timedelta
+import os
+import time
+
+# ===== 强制锁定北京时间（核心！不受梯子/服务器影响）=====
+os.environ['TZ'] = 'Asia/Shanghai'
+try:
+    time.tzset()  # 生效时区设置（兼容Linux/云服务器）
+except:
+    pass  # 兼容Windows/Streamlit Cloud环境
 
 # ===== 核心配置 =====
 start_date = date(2026, 3, 9)
@@ -59,14 +68,14 @@ def get_holiday_label(d: date) -> str:
     else:
         return ""
 
-# ===== Streamlit 页面（保持原名：早班日历）=====
+# ===== Streamlit 页面（保持原名+竖屏适配）=====
 st.set_page_config(
-    page_title="lwl早班日历",
+    page_title="早班日历",
     page_icon="📅",
     layout="wide"
 )
 
-# 自定义样式（极致压缩，竖屏可滑动）
+# 自定义样式（压缩日历，竖屏可滑动）
 st.markdown("""
 <style>
     .main {
@@ -94,7 +103,7 @@ st.markdown("""
         text-align: center;
         margin-top: 5px;
     }
-    /* 核心：强制7列，每列最小宽度，竖屏可滑动 */
+    /* 核心：强制7列，竖屏可滑动 */
     .stColumns > div {
         min-width: 42px !important;
         flex: 1 1 calc(100% / 7) !important;
@@ -124,7 +133,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("📅 lwl早班日历")
+st.title("📅 早班日历")
 
 tab1, tab2 = st.tabs(["今日早班", "月度日历"])
 
