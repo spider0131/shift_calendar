@@ -1,11 +1,5 @@
 import streamlit as st
 
-# 1. 设置页面基本信息（标签页图标）
-st.set_page_config(
-    page_title="lwl早班日历",
-    page_icon="icon-192x192.png",  # 用你上传的图标
-    layout="wide"
-)
 
 # 2. 注入 PWA manifest（关键：让手机识别桌面图标）
 st.markdown(
